@@ -1,0 +1,36 @@
+display_name: 软著申请资料生成
+short_description: 从真实项目生成软著申请 Word 和 TXT 材料
+default_prompt: 读取当前目录中的项目，生成软件著作权申请资料草稿，确认后输出 Word 和 TXT。
+
+capabilities:
+  supports_file_creation: true
+  supports_shell_execution: true
+  supports_user_interaction: true
+  supports_workspace_access: true
+
+environment:
+  python_version: "3.10+"
+  required_dependencies:
+    - python-docx
+  optional_dependencies:
+    - dotnet-sdk
+    - pandoc
+
+file_patterns:
+  include:
+    - "*.py"
+    - "*.js"
+    - "*.ts"
+    - "*.jsx"
+    - "*.tsx"
+    - "*.vue"
+    - "*.java"
+    - "*.go"
+    - "*.rs"
+  exclude:
+    - "node_modules/**"
+    - "dist/**"
+    - "build/**"
+    - "target/**"
+    - ".git/**"
+    - "__pycache__/**"

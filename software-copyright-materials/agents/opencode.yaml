@@ -1,0 +1,63 @@
+display_name: 软著申请资料生成
+short_description: 从真实项目生成软著申请 Word 和 TXT 材料
+default_prompt: 读取当前目录中的项目，生成软件著作权申请资料草稿，确认后输出 Word 和 TXT。
+
+extends: _base.yaml
+
+tool_specific:
+  opencode:
+    mcp_support: true
+    terminal_mode: full
+    file_watch: true
+
+screenshot_methods:
+  available:
+    - user_supplied
+    - playwright
+  recommended: user_supplied
+  description: "OpenCode 推荐使用用户自行截图方式"
+
+interaction_flow:
+  stages:
+    - name: environment_check
+      description: 环境检查
+      command: python3 scripts/check_environment.py --out-dir 软件著作权申请资料
+
+    - name: project_analysis
+      description: 项目分析
+      command: python3 scripts/analyze_project.py --project {project_dir} --out 软件著作权申请资料/analysis/project.json
+
+    - name: business_context
+      description: 业务理解
+      command: python3 scripts/generate_business_context.py --project {project_dir} --analysis 软件著作权申请资料/analysis/project.json --software-name "{software_name}" --out-dir 软件著作权申请资料/草稿
+
+    - name: code_selection
+      description: 代码选择
+      command: python3 scripts/propose_code_selection.py --project {project_dir} --analysis 软件著作权申请资料/analysis/project.json --out-dir 软件著作权申请资料/草稿
+
+    - name: extract_code
+      description: 代码抽取
+      command: python3 scripts/extract_code_material.py --project {project_dir} --analysis 软件著作权申请资料/analysis/project.json --selection 软件著作权申请资料/草稿/代码文件选择.json --software-name "{software_name}" --version "{version}" --out-dir 软件著作权申请资料/草稿
+
+    - name: generate_application
+      description: 申请表生成
+      command: python3 scripts/generate_application_info.py --analysis 软件著作权申请资料/analysis/project.json --code-manifest 软件著作权申请资料/草稿/代码提取清单.json --business-context 软件著作权申请资料/草稿/业务理解.json --software-name "{software_name}" --version "{version}" --out-dir 软件著作权申请资料/草稿
+
+    - name: generate_manual
+      description: 操作手册生成
+      command: python3 scripts/generate_manual_draft.py --analysis 软件著作权申请资料/analysis/project.json --business-context 软件著作权申请资料/草稿/业务理解.json --software-name "{software_name}" --version "{version}" --out-dir 软件著作权申请资料/草稿
+
+    - name: build_docx
+      description: 生成正式资料
+      command: python3 scripts/build_docx_from_md.py --workdir 软件著作权申请资料 --software-name "{software_name}" --version "{version}"
+
+workflow:
+  gate_before_generation: true
+  require_user_confirmation_stages:
+    - business
+    - application-fields
+    - code-selection
+    - markdown
+
+  confirmation_command: |
+    python3 scripts/confirm_stage.py --workdir 软件著作权申请资料 --stage {stage} --note "{note}"

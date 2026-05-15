@@ -9,7 +9,30 @@ description: >
   Word documents and TXT.
 metadata:
   short-description: 生成软著申请资料 Word/TXT
+  supported-tools:
+    - claude-code
+    - cursor
+    - trae-cn
+    - opencode
 ---
+
+## 支持的 AI 工具
+
+本 skill 支持多种 AI 编程工具/IDE 的 agent 模式：
+
+| 工具 | 配置文件 | 备注 |
+|------|----------|------|
+| Claude Code | `agents/claude.yaml` | 原有支持 |
+| Cursor | `agents/cursor.yaml` | AI 代码编辑器 |
+| Trae CN | `agents/trae.yaml` | 字节跳动出品的中文 IDE |
+| OpenCode | `agents/opencode.yaml` | 开源 AI 代码助手 |
+| Codex | `agents/openai.yaml` | OpenAI Codex |
+
+不同工具的配置文件位于 `agents/` 目录下，统一使用 YAML 格式，定义了：
+- 工具特定的能力和限制
+- 截图方式推荐
+- 工作流阶段和命令模板
+- 用户交互门禁配置
 
 # 软著申请资料生成
 
@@ -33,6 +56,11 @@ metadata:
 - 操作手册必须去除明显“AI 味”：避免空泛赞美、营销口号、万能句式、每章同一结构、过度对称的排比、没有项目细节的正确废话、频繁使用“旨在、赋能、一站式、智能化、高效便捷、显著提升、强大能力、丰富功能”等套话。每段都应能回答“这个项目里这个功能具体做什么、用户看见什么、操作后有什么结果”。
 - 操作手册生成必须同步输出 `草稿/操作手册自检记录.md` 和 `草稿/操作手册自检记录.json`，记录初稿、按项目流程扩写、去制式表达等自检轮次；如果前 3 轮仍发现问题，必须继续补写修正，直到问题清零或记录无法自动修复的原因后再停止。
 - 截图方式必须先让用户选择：Chrome DevTools MCP、Codex Computer Use、用户自行截图。用户选完后，再检查当前 MCP / Computer Use 能力是否可用；如果用户说现在不截图、先跳过截图或截图失败，操作手册仍必须保留清晰可见的截图预留位置，正式 Word 中也要能看到。
+
+**多工具截图方式适配：**
+- Claude Code / Cursor：优先使用 MCP 工具截图；无 MCP 时推荐用户自行截图
+- Trae CN / OpenCode：推荐用户自行截图；支持 playwright 截图
+- Codex：支持 Computer Use 截图
 - 申请表信息中的硬件/系统环境必须让用户确认或填写，不能硬编码。
 - Word 生成能力必须使用本 skill 内置的 `vendor/docx-toolkit`；不得引用外部 DOCX 目录。
 
