@@ -34,6 +34,33 @@ metadata:
 - 工作流阶段和命令模板
 - 用户交互门禁配置
 
+### 工具检测与自动适配
+
+环境检查脚本会自动检测当前使用的 AI 工具：
+
+```bash
+python3 scripts/check_environment.py --out-dir 软件著作权申请资料
+```
+
+输出包含：
+- `ai_tool_detected`：检测到的 AI 工具类型
+- `screenshot_recommendation`：推荐的截图方式
+- `tool_config_hint`：建议使用的配置文件
+
+### 各工具截图方式推荐
+
+| 工具 | 推荐截图方式 | 说明 |
+|------|-------------|------|
+| Claude Code | chrome_devtools | 可通过 MCP 工具直接截图 |
+| Cursor | user_supplied | 推荐用户提供截图 |
+| Trae CN | user_supplied | 推荐用户提供截图 |
+| OpenCode | user_supplied | 推荐用户提供截图 |
+| Codex | computer_use | 支持 Computer Use 截图 |
+
+### 手动指定工具配置
+
+如果自动检测不准确，可以在运行时指定配置文件路径。不同工具的配置文件结构相同，可以互相参考。
+
 # 软著申请资料生成
 
 这个 skill 生成可审阅、可追溯的软著申请资料。核心原则：

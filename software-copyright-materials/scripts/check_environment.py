@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -39,11 +40,61 @@ def module_available(name: str) -> bool:
     return importlib.util.find_spec(name) is not None
 
 
+def detect_ai_tool() -> dict[str, Any]:
+    tool_signatures = {
+        "trae-cn": {
+            "name": "Trae CN",
+            "env_vars": ["TRAE_API_KEY", "TRAE_SESSION"],
+            "files": [Path.home() / ".trae" / "config.json"],
+        },
+        "opencode": {
+            "name": "OpenCode",
+            "env_vars": ["OPENCODE_API_KEY"],
+            "files": [],
+        },
+        "cursor": {
+            "name": "Cursor",
+            "env_vars": ["CURSOR_API_KEY"],
+            "files": [Path.home() / ".cursor" / "settings.json"],
+        },
+        "claude-code": {
+            "name": "Claude Code",
+            "env_vars": ["CLAUDE_API_KEY", "ANTHROPIC_API_KEY"],
+            "files": [Path.home() / ".claude" / "settings.json"],
+        },
+        "codex": {
+            "name": "Codex",
+            "env_vars": ["OPENAI_API_KEY"],
+            "files": [],
+        },
+    }
+
+    scores: dict[str, int] = {}
+    for tool_id, sig in tool_signatures.items():
+        score = 0
+        if any(os.environ.get(var) for var in sig["env_vars"]):
+            score += 3
+        if any(f.expanduser().exists() for f in sig["files"]):
+            score += 1
+        scores[tool_id] = score
+
+    detected = max(scores, key=scores.get) if scores else "unknown"
+    if scores.get(detected, 0) == 0:
+        detected = "unknown"
+
+    return {
+        "detected": detected,
+        "name": tool_signatures.get(detected, {}).get("name", "Unknown"),
+        "scores": scores,
+    }
+
+
 def check_environment(skill_dir: Path) -> dict[str, Any]:
     python_docx = module_available("docx")
     pandoc_ok, pandoc_version = command_version(["pandoc", "--version"])
     dotnet_ok, dotnet_version = command_version(["dotnet", "--version"])
     docx_ready, docx_output = run_docx_env(skill_dir)
+    ai_tool = detect_ai_tool()
 
     final_docx_mode = "docx-openxml" if docx_ready else ("python-docx" if python_docx else "basic-ooxml")
     requires_user_input = not docx_ready
@@ -52,8 +103,16 @@ def check_environment(skill_dir: Path) -> dict[str, Any]:
         if requires_user_input
         else "完整 DOCX 环境可用，可以进入项目分析。"
     )
+
+    screenshot_recommendation = "user_supplied"
+    if ai_tool["detected"] == "claude-code":
+        screenshot_recommendation = "chrome_devtools"
+    elif ai_tool["detected"] == "codex":
+        screenshot_recommendation = "computer_use"
+
     return {
         "output_directory": "当前目录/软件著作权申请资料",
+        "ai_tool_detected": ai_tool,
         "capabilities": {
             "markdown_drafts": True,
             "application_txt": True,
@@ -82,16 +141,25 @@ def check_environment(skill_dir: Path) -> dict[str, Any]:
         "confirmation_stage": "environment" if requires_user_input else None,
         "next_action": next_action,
         "docx_env_output": docx_output,
+        "screenshot_recommendation": screenshot_recommendation,
+        "tool_config_hint": f"检测到 {ai_tool['name']}，建议使用 agents/{ai_tool['detected']}.yaml 配置文件" if ai_tool["detected"] != "unknown" else "未检测到特定 AI 工具，使用通用配置",
     }
 
 
 def write_markdown(path: Path, data: dict[str, Any]) -> None:
     caps = data["capabilities"]
+    ai_tool = data["ai_tool_detected"]
     lines = [
         "# 软著申请资料生成环境检查",
         "",
         f"- 输出目录：`{data['output_directory']}`",
         f"- 最终 Word 模式：`{data['final_docx_mode']}`",
+        "",
+        "## AI 工具检测",
+        "",
+        f"- 检测到的工具：{ai_tool['name']}（{ai_tool['detected']}）",
+        f"- 建议配置文件：`agents/{ai_tool['detected']}.yaml`",
+        f"- 建议截图方式：`{data['screenshot_recommendation']}`",
         "",
         "## 能力状态",
         "",
@@ -139,6 +207,7 @@ def main() -> None:
     write_json(out_dir / "环境检查.json", data)
     write_markdown(out_dir / "环境检查.md", data)
     print(f"OK environment check: {out_dir}")
+    print(f"Detected AI tool: {data['ai_tool_detected']['name']}")
     print(f"Final DOCX mode: {data['final_docx_mode']}")
     print(data["recommendation"])
     if data.get("requires_user_input"):
